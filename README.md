@@ -1,4 +1,4 @@
-# bitfield
+# bitfield (WIP)
 WIP: struct bit fields + un(packing), similar-ish to C bit fields (with Go idioms)
 
 Example:
