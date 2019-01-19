@@ -3,16 +3,16 @@ struct bit fields + un(packing), similar-ish to C bit fields (with Go idioms)
 
 Example:
 ```
-type A struct {
-    x bool      `len:"1"`
-    y uint      `len:"8"` // bits length
+type s1 struct {
+    X bool      `len:"1"`
+    Y uint      `len:"8"` // bits length
     _ struct{}  `len:"0"` // fill to nearest byte
-    z []B
+    Z []s2
 }
 
-type B struct {
-    x []byte    `len:"8"` // bytes length
-    y []byte    `upack:"customUnpack" pack:"customPack"`
-    z []byte    `len:"0"` // fill all the bytes left
+type s2 struct {
+    X []byte    `len:"8"` // bytes length
+    Y []byte    `upack:"customUnpack" pack:"customPack"`
+    Z []byte    `len:"0"` // fill all the bytes left
 }
 ```

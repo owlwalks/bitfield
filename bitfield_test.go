@@ -22,3 +22,34 @@ func Test_registerField(t *testing.T) {
 		t.Error("Unmatched kind and len on struct1")
 	}
 }
+
+func TestUnpack(t *testing.T) {
+	type s struct {
+		_  struct{} `len:"4"`
+		F1 int8     `len:"6"`
+		_  struct{} `len:"6"`
+		F2 int8     `len:"2"`
+		_  struct{} `len:"5"`
+		F3 int8     `len:"1"`
+		F4 bool     `len:"1"`
+		F5 int8     `len:"7"`
+	}
+	s1 := s{}
+	Register(s1)
+	Unpack(&s1, []byte{0x97, 0x98, 0xD2, 0xB2, 0xCA, 0x28})
+	if s1.F1 != 30 {
+		t.Errorf("Expect %06b, got %06b\n", 30, s1.F1)
+	}
+	if s1.F2 != 3 {
+		t.Errorf("Expect %02b, got %02b\n", 3, s1.F2)
+	}
+	if s1.F3 != 0 {
+		t.Errorf("Expect %b, got %b\n", 0, s1.F3)
+	}
+	if s1.F4 {
+		t.Errorf("Expect true, got %v", s1.F4)
+	}
+	if s1.F5 != 50 {
+		t.Errorf("Expect %07b, got %07b", 50, s1.F5)
+	}
+}

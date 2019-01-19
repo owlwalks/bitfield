@@ -60,7 +60,7 @@ func anameUpack(in []byte, curr int) ([]byte, error) {
 	// TODO consider endianness
 	for i, delim := curr, 0; i < len(in); i++ {
 		if in[i]&0xC0 == 0xC0 {
-			// get the pos
+			// get position, skip first 2 bits (11)
 			offset := (int(in[i])^0xC0)<<8 | int(in[i+1])
 			ptr, _ := nameUpack(in, offset)
 			ret = append(ret, '.')

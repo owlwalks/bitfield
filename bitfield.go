@@ -9,45 +9,40 @@ import (
 
 var once sync.Once
 
-// Unpack is unpacking function
-type Unpack func(in []byte, curr int)
+// Upack is unpacking function
+type Upack func(in []byte, curr int)
 
 type def struct {
 	kind  reflect.Kind
 	len   int
 	name  string
 	uname string
-	upack Unpack
+	upack Upack
 }
 
 var registry struct {
-	sync.RWMutex
 	index map[string]def
 }
 
 // Register index struct fields for un(packing), should use in init()
 func Register(v interface{}) {
 	once.Do(func() {
-		registry.Lock()
-		defer registry.Unlock()
 		registry.index = make(map[string]def)
 	})
 
 	t := reflect.TypeOf(v)
-	if t.Kind() != reflect.Struct || t.Kind() != reflect.Func {
+	if t.Kind() != reflect.Struct && t.Kind() != reflect.Func {
 		log.Printf("Register expects struct or func, got %v\n", t.Kind())
 		return
 	}
 
 	name := t.Name()
-	registry.Lock()
-	defer registry.Unlock()
 	// stop if already defined
 	if _, ok := registry.index[name]; ok {
 		return
 	}
 	if t.Kind() == reflect.Func {
-		registry.index[name] = def{upack: v.(Unpack)}
+		registry.index[name] = def{upack: v.(Upack)}
 		return
 	}
 
@@ -61,13 +56,13 @@ func Register(v interface{}) {
 
 func registerField(index int, name string, sf reflect.StructField) {
 	sft := sf.Type
-
 	if sft.Kind() == reflect.Struct && sft.Name() != "" {
 		if _, ok := registry.index[sf.Name]; !ok {
 			log.Printf("%v needs to be registered before %v\n", sf.Name, name)
 		}
 		return
 	}
+
 	switch sft.Kind() {
 	case reflect.Bool,
 		reflect.Int,
@@ -116,5 +111,50 @@ func registerField(index int, name string, sf reflect.StructField) {
 		}
 	default:
 		log.Printf("%v (%v) of %v is ignored\n", sf.Name, sft.Kind(), name)
+	}
+}
+
+func Unpack(dst interface{}, src []byte) {
+	rMask := [...]int{0, 128, 192, 224, 240, 248, 252, 254, 0}
+	lMask := [...]int{0, 127, 63, 31, 15, 7, 3, 0}
+	v := reflect.Indirect(reflect.ValueOf(dst))
+	name := v.Type().Name()
+	if def, ok := registry.index[name]; !ok || v.Kind() != reflect.Struct {
+		log.Printf("%v needs to be registered\n", name)
+	} else {
+		for fIndex, byteIndex, bitIndex := 0, 0, 0; fIndex < def.len; fIndex++ {
+			if fDef, ok := registry.index[name+strconv.Itoa(fIndex)]; ok {
+				fVal := v.Field(fIndex)
+				switch fDef.kind {
+				case reflect.Bool:
+					fVal.SetBool(src[byteIndex]&(1<<uint(bitIndex)) != 0)
+				case reflect.Int8:
+					rShift := 8 - bitIndex - fDef.len
+					if rShift < 0 {
+						rShift = 0
+					}
+
+					lShift := fDef.len - 8 + bitIndex
+					if lShift < 0 || lShift > 7 {
+						lShift = 0
+					}
+
+					val := (((int(src[byteIndex]) | rMask[bitIndex]) ^ rMask[bitIndex]) >> uint(rShift)) << uint(lShift)
+
+					if lShift > 0 {
+						val |= (((int(src[byteIndex+1]) | lMask[lShift]) ^ lMask[lShift]) >> uint(8-lShift))
+					}
+
+					fVal.SetInt(int64(val))
+				case reflect.Int:
+				case reflect.Int16:
+				case reflect.Int32:
+				case reflect.Int64:
+				}
+				bitIndex += fDef.len
+				byteIndex += bitIndex / 8
+				bitIndex %= 8
+			}
+		}
 	}
 }
