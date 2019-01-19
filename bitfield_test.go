@@ -47,9 +47,9 @@ func TestUnpack(t *testing.T) {
 		t.Errorf("Expect %b, got %b\n", 0, s1.F3)
 	}
 	if s1.F4 {
-		t.Errorf("Expect true, got %v", s1.F4)
+		t.Errorf("Expect true, got false\n")
 	}
 	if s1.F5 != 50 {
-		t.Errorf("Expect %07b, got %07b", 50, s1.F5)
+		t.Errorf("Expect %07b, got %07b\n", 50, s1.F5)
 	}
 }

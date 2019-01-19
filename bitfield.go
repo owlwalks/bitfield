@@ -115,46 +115,48 @@ func registerField(index int, name string, sf reflect.StructField) {
 }
 
 func Unpack(dst interface{}, src []byte) {
-	rMask := [...]int{0, 128, 192, 224, 240, 248, 252, 254, 0}
-	lMask := [...]int{0, 127, 63, 31, 15, 7, 3, 0}
 	v := reflect.Indirect(reflect.ValueOf(dst))
 	name := v.Type().Name()
-	if def, ok := registry.index[name]; !ok || v.Kind() != reflect.Struct {
+	def, ok := registry.index[name]
+	if !ok || v.Kind() != reflect.Struct {
 		log.Printf("%v needs to be registered\n", name)
-	} else {
-		for fIndex, byteIndex, bitIndex := 0, 0, 0; fIndex < def.len; fIndex++ {
-			if fDef, ok := registry.index[name+strconv.Itoa(fIndex)]; ok {
-				fVal := v.Field(fIndex)
-				switch fDef.kind {
-				case reflect.Bool:
-					fVal.SetBool(src[byteIndex]&(1<<uint(bitIndex)) != 0)
-				case reflect.Int8:
-					rShift := 8 - bitIndex - fDef.len
-					if rShift < 0 {
-						rShift = 0
-					}
+		return
+	}
 
-					lShift := fDef.len - 8 + bitIndex
-					if lShift < 0 || lShift > 7 {
-						lShift = 0
-					}
-
-					val := (((int(src[byteIndex]) | rMask[bitIndex]) ^ rMask[bitIndex]) >> uint(rShift)) << uint(lShift)
-
-					if lShift > 0 {
-						val |= (((int(src[byteIndex+1]) | lMask[lShift]) ^ lMask[lShift]) >> uint(8-lShift))
-					}
-
-					fVal.SetInt(int64(val))
-				case reflect.Int:
-				case reflect.Int16:
-				case reflect.Int32:
-				case reflect.Int64:
+	rMask := [...]int{0, 128, 192, 224, 240, 248, 252, 254, 0}
+	lMask := [...]int{0, 127, 63, 31, 15, 7, 3, 0}
+	for fIndex, byteIndex, bitIndex := 0, 0, 0; fIndex < def.len; fIndex++ {
+		if fDef, ok := registry.index[name+strconv.Itoa(fIndex)]; ok {
+			fVal := v.Field(fIndex)
+			switch fDef.kind {
+			case reflect.Bool:
+				fVal.SetBool(src[byteIndex]&(1<<uint(bitIndex)) != 0)
+			case reflect.Int8:
+				rShift := 8 - bitIndex - fDef.len
+				if rShift < 0 {
+					rShift = 0
 				}
-				bitIndex += fDef.len
-				byteIndex += bitIndex / 8
-				bitIndex %= 8
+
+				lShift := fDef.len - 8 + bitIndex
+				if lShift < 0 || lShift > 7 {
+					lShift = 0
+				}
+
+				val := (((int(src[byteIndex]) | rMask[bitIndex]) ^ rMask[bitIndex]) >> uint(rShift)) << uint(lShift)
+
+				if lShift > 0 {
+					val |= (((int(src[byteIndex+1]) | lMask[lShift]) ^ lMask[lShift]) >> uint(8-lShift))
+				}
+
+				fVal.SetInt(int64(val))
+			case reflect.Int:
+			case reflect.Int16:
+			case reflect.Int32:
+			case reflect.Int64:
 			}
+			bitIndex += fDef.len
+			byteIndex += bitIndex / 8
+			bitIndex %= 8
 		}
 	}
 }
