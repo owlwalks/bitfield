@@ -139,14 +139,14 @@ func Unpack(dst interface{}, src []byte) {
 				if l > 24 {
 					val |= toByte(src, byteIndex, bitIndex, 8) << 24
 					byteIndex, bitIndex = nextIndices(byteIndex, bitIndex, 8)
-					l -= 24
+					l -= 8
 				}
 				fallthrough
 			case reflect.Int32:
 				if l > 16 {
 					val |= toByte(src, byteIndex, bitIndex, 8) << 16
 					byteIndex, bitIndex = nextIndices(byteIndex, bitIndex, 8)
-					l -= 16
+					l -= 8
 				}
 				fallthrough
 			case reflect.Int16:
@@ -161,7 +161,12 @@ func Unpack(dst interface{}, src []byte) {
 				byteIndex, bitIndex = nextIndices(byteIndex, bitIndex, l)
 				fVal.SetInt(val)
 			default:
-				byteIndex, bitIndex = nextIndices(byteIndex, bitIndex, fDef.len)
+				if fDef.len == 0 && fDef.kind == reflect.Struct {
+					byteIndex++
+					bitIndex = 0
+				} else {
+					byteIndex, bitIndex = nextIndices(byteIndex, bitIndex, fDef.len)
+				}
 			}
 		}
 	}

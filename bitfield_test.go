@@ -34,11 +34,15 @@ func TestUnpack(t *testing.T) {
 		F4 bool     `len:"1"`
 		F5 int8     `len:"7"`
 		F6 int16    `len:"3"`
-		F7 int16    `len:"13"`
+		_  struct{} `len:"0"`
+		F7 int16    `len:"7"`
+		_  struct{} `len:"0"`
+		F8 int32    `len:"16"`
+		F9 int      `len:"25"`
 	}
 	s1 := s{}
 	Register(s1)
-	Unpack(&s1, []byte{0x97, 0x98, 0xD2, 0xB2, 0xCA, 0x28})
+	Unpack(&s1, []byte{0x97, 0x98, 0xD2, 0xB2, 0xCA, 0x28, 0x99, 0x3F, 0xD5, 0xE7, 0x70, 0xFC})
 	if s1.F1 != 30 {
 		t.Errorf("Expect %06b, got %06b\n", 30, s1.F1)
 	}
@@ -57,7 +61,13 @@ func TestUnpack(t *testing.T) {
 	if s1.F6 != 6 {
 		t.Errorf("Expect %03b, got %03b\n", 6, s1.F6)
 	}
-	if s1.F7 != 20744 {
-		t.Errorf("Expect %13b, got %13b\n", 20744, s1.F7)
+	if s1.F7 != 20 {
+		t.Errorf("Expect %013b, got %013b\n", 20, s1.F7)
+	}
+	if s1.F8 != 39231 {
+		t.Errorf("Expect %016b, got %016b\n", 39231, s1.F8)
+	}
+	if s1.F9 != 3588714497 {
+		t.Errorf("Expect %025b, got %025b\n", 3588714497, s1.F9)
 	}
 }
