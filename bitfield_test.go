@@ -33,6 +33,8 @@ func TestUnpack(t *testing.T) {
 		F3 int8     `len:"1"`
 		F4 bool     `len:"1"`
 		F5 int8     `len:"7"`
+		F6 int16    `len:"3"`
+		F7 int16    `len:"13"`
 	}
 	s1 := s{}
 	Register(s1)
@@ -51,5 +53,11 @@ func TestUnpack(t *testing.T) {
 	}
 	if s1.F5 != 50 {
 		t.Errorf("Expect %07b, got %07b\n", 50, s1.F5)
+	}
+	if s1.F6 != 6 {
+		t.Errorf("Expect %03b, got %03b\n", 6, s1.F6)
+	}
+	if s1.F7 != 20744 {
+		t.Errorf("Expect %13b, got %13b\n", 20744, s1.F7)
 	}
 }

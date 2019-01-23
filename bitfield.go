@@ -7,8 +7,6 @@ import (
 	"sync"
 )
 
-var once sync.Once
-
 // Upack is unpacking function
 type Upack func(in []byte, curr int)
 
@@ -20,9 +18,14 @@ type def struct {
 	upack Upack
 }
 
-var registry struct {
-	index map[string]def
-}
+var (
+	registry struct {
+		index map[string]def
+	}
+	rMask = [...]int{0, 128, 192, 224, 240, 248, 252, 254, 0}
+	lMask = [...]int{0, 127, 63, 31, 15, 7, 3, 1, 0}
+	once  sync.Once
+)
 
 // Register index struct fields for un(packing), should use in init()
 func Register(v interface{}) {
@@ -123,40 +126,68 @@ func Unpack(dst interface{}, src []byte) {
 		return
 	}
 
-	rMask := [...]int{0, 128, 192, 224, 240, 248, 252, 254, 0}
-	lMask := [...]int{0, 127, 63, 31, 15, 7, 3, 0}
 	for fIndex, byteIndex, bitIndex := 0, 0, 0; fIndex < def.len; fIndex++ {
 		if fDef, ok := registry.index[name+strconv.Itoa(fIndex)]; ok {
 			fVal := v.Field(fIndex)
+			val := int64(0)
+			l := fDef.len
 			switch fDef.kind {
 			case reflect.Bool:
 				fVal.SetBool(src[byteIndex]&(1<<uint(bitIndex)) != 0)
-			case reflect.Int8:
-				rShift := 8 - bitIndex - fDef.len
-				if rShift < 0 {
-					rShift = 0
+				byteIndex, bitIndex = nextIndices(byteIndex, bitIndex, fDef.len)
+			case reflect.Int, reflect.Int64:
+				if l > 24 {
+					val |= toByte(src, byteIndex, bitIndex, 8) << 24
+					byteIndex, bitIndex = nextIndices(byteIndex, bitIndex, 8)
+					l -= 24
 				}
-
-				lShift := fDef.len - 8 + bitIndex
-				if lShift < 0 || lShift > 7 {
-					lShift = 0
-				}
-
-				val := (((int(src[byteIndex]) | rMask[bitIndex]) ^ rMask[bitIndex]) >> uint(rShift)) << uint(lShift)
-
-				if lShift > 0 {
-					val |= (((int(src[byteIndex+1]) | lMask[lShift]) ^ lMask[lShift]) >> uint(8-lShift))
-				}
-
-				fVal.SetInt(int64(val))
-			case reflect.Int:
-			case reflect.Int16:
+				fallthrough
 			case reflect.Int32:
-			case reflect.Int64:
+				if l > 16 {
+					val |= toByte(src, byteIndex, bitIndex, 8) << 16
+					byteIndex, bitIndex = nextIndices(byteIndex, bitIndex, 8)
+					l -= 16
+				}
+				fallthrough
+			case reflect.Int16:
+				if l > 8 {
+					val |= toByte(src, byteIndex, bitIndex, 8) << 8
+					byteIndex, bitIndex = nextIndices(byteIndex, bitIndex, 8)
+					l -= 8
+				}
+				fallthrough
+			case reflect.Int8:
+				val |= toByte(src, byteIndex, bitIndex, l)
+				byteIndex, bitIndex = nextIndices(byteIndex, bitIndex, l)
+				fVal.SetInt(val)
+			default:
+				byteIndex, bitIndex = nextIndices(byteIndex, bitIndex, fDef.len)
 			}
-			bitIndex += fDef.len
-			byteIndex += bitIndex / 8
-			bitIndex %= 8
 		}
 	}
+}
+
+func toByte(src []byte, byteIndex, bitIndex, bitLen int) int64 {
+	rShift := 8 - bitIndex - bitLen
+	if rShift < 0 {
+		rShift = 0
+	}
+
+	lShift := bitLen - 8 + bitIndex
+	if lShift < 0 || lShift > 7 {
+		lShift = 0
+	}
+
+	val := (((int(src[byteIndex]) | rMask[bitIndex]) ^ rMask[bitIndex]) >> uint(rShift)) << uint(lShift)
+
+	if lShift > 0 && (byteIndex+1 <= len(src)-1) {
+		val |= (((int(src[byteIndex+1]) | lMask[lShift]) ^ lMask[lShift]) >> uint(8-lShift))
+	}
+
+	return int64(val)
+}
+
+func nextIndices(byteIndex, bitIndex, len int) (int, int) {
+	bitIndex += len
+	return byteIndex + (bitIndex / 8), bitIndex % 8
 }
