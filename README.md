@@ -15,4 +15,16 @@ type s2 struct {
     Y []byte    `upack:"customUnpack" pack:"customPack"`
     Z []byte    `len:"0"` // fill all the bytes left
 }
+
+dst := s1{}
+bitfield.Unpack(&dst, []byte{})
+```
+
+Notice:
+```
+bitfield.Unpack(&dst, src) is equivalence of bitfield.BigEndian.Unpack(&dst, src)
+```
+For little endianness, use:
+```
+bitfield.LittleEndian.Unpack(&dst, src)
 ```

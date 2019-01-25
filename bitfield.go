@@ -18,6 +18,11 @@ type def struct {
 	upack Upack
 }
 
+type (
+	bigEndian    struct{}
+	littleEndian struct{}
+)
+
 var (
 	registry struct {
 		index map[string]def
@@ -25,7 +30,19 @@ var (
 	rMask = [...]uint{0, 128, 192, 224, 240, 248, 252, 254, 0}
 	lMask = [...]uint{0, 127, 63, 31, 15, 7, 3, 1, 0}
 	once  sync.Once
+	// BigEndian is big endianness (default)
+	BigEndian bigEndian
+	// LittleEndian for little endianness
+	LittleEndian littleEndian
 )
+
+func (e bigEndian) Unpack(dst interface{}, src []byte) {
+	Unpack(dst, src)
+}
+
+func (e littleEndian) Unpack(dst interface{}, src []byte) {
+
+}
 
 // Register index struct fields for un(packing), should use in init()
 func Register(v interface{}) {
