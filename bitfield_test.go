@@ -25,24 +25,25 @@ func Test_registerField(t *testing.T) {
 
 func TestUnpack(t *testing.T) {
 	type s struct {
-		_  struct{} `len:"4"`
-		F1 int8     `len:"6"`
-		_  struct{} `len:"6"`
-		F2 int8     `len:"2"`
-		_  struct{} `len:"5"`
-		F3 int8     `len:"1"`
-		F4 bool     `len:"1"`
-		F5 int8     `len:"7"`
-		F6 int16    `len:"3"`
-		_  struct{} `len:"0"`
-		F7 int16    `len:"7"`
-		_  struct{} `len:"0"`
-		F8 int32    `len:"16"`
-		F9 int      `len:"25"`
+		_   struct{} `len:"4"`
+		F1  int8     `len:"6"`
+		_   struct{} `len:"6"`
+		F2  int8     `len:"2"`
+		_   struct{} `len:"5"`
+		F3  int8     `len:"1"`
+		F4  bool     `len:"1"`
+		F5  int8     `len:"7"`
+		F6  int16    `len:"3"`
+		_   struct{} `len:"0"`
+		F7  int16    `len:"7"`
+		_   struct{} `len:"0"`
+		F8  int32    `len:"16"`
+		F9  int      `len:"25"`
+		F10 int      `len:"33"`
 	}
 	s1 := s{}
 	Register(s1)
-	BigEndian.Unpack(&s1, []byte{0x97, 0x98, 0xD2, 0xB2, 0xCA, 0x28, 0x99, 0x3F, 0xD5, 0xE7, 0x70, 0xFC})
+	BigEndian.Unpack(&s1, []byte{0x97, 0x98, 0xD2, 0xB2, 0xCA, 0x28, 0x99, 0x3F, 0xD5, 0xE7, 0x70, 0xFC, 0x35, 0xEE, 0x54, 0x58, 0xC6, 0x14})
 	if s1.F1 != 30 {
 		t.Errorf("Expect %06b, got %06b\n", 30, s1.F1)
 	}
@@ -69,5 +70,8 @@ func TestUnpack(t *testing.T) {
 	}
 	if s1.F9 != 3588714497 {
 		t.Errorf("Expect %025b, got %025b\n", 3588714497, s1.F9)
+	}
+	if s1.F10 != 1066961512449 {
+		t.Errorf("Expect %033b, got %033b\n", 1066961512449, s1.F10)
 	}
 }

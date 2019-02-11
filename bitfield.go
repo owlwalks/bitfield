@@ -149,9 +149,17 @@ func Unpack(dst interface{}, src []byte) {
 				fVal.SetBool(src[byteIndex]&(1<<uint(bitIndex)) != 0)
 				byteIndex, bitIndex = nextIndices(byteIndex, bitIndex, fDef.len)
 			case reflect.Uint64, reflect.Uint, reflect.Int64, reflect.Int:
-				if l > 24 {
-					val |= toByte(src, byteIndex, bitIndex, 8) << 24
+				if l > 64 {
+					l = 64
+				}
+				shift := 0
+				for shift+8 < l {
+					shift += 8
+				}
+				for l > 24 {
+					val |= toByte(src, byteIndex, bitIndex, 8) << uint(shift)
 					byteIndex, bitIndex = nextIndices(byteIndex, bitIndex, 8)
+					shift -= 8
 					l -= 8
 				}
 				fallthrough
